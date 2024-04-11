@@ -3,7 +3,8 @@ title: "Glaeserella parasuis Typing Report"
 date: "`r Sys.Date()`"
 output: html_document
 params:
-  sero: ""
+  sero1: ""
+  sero2: ""
   mlst: ""
   csv : ""
 ---
@@ -25,10 +26,16 @@ params:
 ### TYPING RESULTS
 ```{r, results='asis',echo=FALSE}
   
-  sero_raw <- read.csv(params$sero,header = TRUE,sep = "\t")
-  sero_final <- sero_raw[,c(1,6,10,11,15)]
-  colnames(sero_final) <- c("SAMPLE","GENE","%COVERAGE","%IDENTITY","SEROTYPE")
-  print(knitr::kable(sero_final,align='lcccl',caption = "Serotype - \n Predicted based on capsular polysaccharides(cps).For more info please see https://doi.org/10.1186/s12866-016-0782-8"))
+  sero_raw_1 <- read.csv(params$sero1,header = TRUE,sep = "\t")
+  sero_final_1 <- sero_raw_1[,c(1,6,10,11,15)]
+  colnames(sero_final_1) <- c("SAMPLE","GENE","%COVERAGE","%IDENTITY","SEROTYPE")
+  print(knitr::kable(sero_final_1,align='lcccl',caption = "Serotype - \n Predicted based on Howell et al., 2015. For more info please see https://doi.org/10.1128/jcm.01991-15"))
+  cat("\n")
+
+  sero_raw_2 <- read.csv(params$sero2,header = TRUE,sep = "\t")
+  sero_final_2 <- sero_raw_2[,c(1,6,10,11,15)]
+  colnames(sero_final_2) <- c("SAMPLE","GENE","%COVERAGE","%IDENTITY","SEROTYPE")
+  print(knitr::kable(sero_final_2,align='lcccl',caption = "Serotype - \n Predicted based on Jia et al., 2017.For more info please see https://doi.org/10.1128/jcm.00688-17"))
   cat("\n")
 
   mlst_raw <- read.csv(params$mlst,header = TRUE,sep = "\t")
@@ -55,7 +62,7 @@ params:
     vf_raw <- read.csv(vf_id,header = TRUE,sep="\t")
     vf_final <- vf_raw[,c(1,6,10,11,15)]
     colnames(vf_final) <- c("SAMPLE","GENE","%COVERAGE","%IDENTITY","VIRULENCE FACTOR")
-    print(knitr::kable(vf_final,align= 'lcccl',caption = "Virulence factors - \n Predicted based on https://doi.org/10.1186/s12866-016-0782-8 using abricate tool"))
+    print(knitr::kable(vf_final,align= 'lcccl',caption = "Virulence factors - \n Predicted based on https://peerj.com/articles/15823/ and abricate tool(https://github.com/tseemann/abricate) "))
     cat("\n")
 
     amr_id <- (paste(i,"_AMR.csv",sep=""))

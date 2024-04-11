@@ -126,14 +126,18 @@ process abricate{
 	tuple val(SampleName),path(consensus)
 	path (db)
 	output:
-	path("${SampleName}_sero.csv"),emit:sero
+	path("${SampleName}_sero_Howell.csv"),emit:sero_Howell
+	path("${SampleName}_sero_Jia.csv"),emit:sero_jia
 	path("${SampleName}_vf.csv"),emit:vif
 	path("${SampleName}_AMR.csv"),emit:AMR
 	
 	script:
 	"""
-	abricate --datadir ${db} --db Gparasuis_serodb -minid 80  -mincov 60 --quiet ${consensus} 1> ${SampleName}_sero.csv
-	sed -i 's,_flye.fasta,,g' ${SampleName}_sero.csv
+	abricate --datadir ${db} --db Gparasuis_serodb_Howell -minid 80  -mincov 60 --quiet ${consensus} 1> ${SampleName}_sero_Howell.csv
+	sed -i 's,_flye.fasta,,g' ${SampleName}_sero_Howell.csv
+	abricate --datadir ${db} --db Gparasuis_serodb_Jia -minid 80  -mincov 60 --quiet ${consensus} 1> ${SampleName}_sero_Jia.csv
+	sed -i 's,_flye.fasta,,g' ${SampleName}_sero_Jia.csv
+
 	abricate -datadir ${db} --db Gparasuis_vfdb ${consensus} 1> ${SampleName}_vf.csv
 	sed -i 's,_flye.fasta,,g' ${SampleName}_vf.csv
 	abricate --db card ${consensus} 1> ${SampleName}_AMR.csv
@@ -149,16 +153,22 @@ process make_limsfile {
 	label "low"
 	publishDir "${params.out_dir}/LIMS",mode:"copy"
 	input:
-	path (serotyping_results)
+	path (sero_Howell)
+	path (sero_jia)
 	path (mlst_results)
 	output:
-	path("Gpara_sero_file.csv")
+	path("Gpara_sero_Howell.csv")
+	path("Gpara_sero_jia.csv")
 	path("Gpara_MLST_file.csv")
 	script:
 	"""
 	# merge serotyping and mlst results
-	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${serotyping_results} > Gpara_sero_file.csv
-	sed -i 's/#FILE/id/g' Gpara_sero_file.csv
+	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${sero_Howell} > Gpara_sero_Howell.csv
+	sed -i 's/#FILE/id/g' Gpara_sero_Howell.csv
+
+	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${sero_jia} > Gpara_sero_jia.csv
+	sed -i 's/#FILE/id/g' Gpara_sero_jia.csv
+
 	awk 'FNR==1 && NR!=1 { while (/^FILE/) getline; } 1 {print}' ${mlst_results} > Gpara_MLST_file.csv
 	sed -i 's/FILE/id/g' Gpara_MLST_file.csv
 	"""
@@ -169,7 +179,8 @@ process make_report {
 	publishDir "${params.out_dir}/",mode:"copy"
 	input:
 	path(rmdfile)
-	path(serofile)
+	path(sero_Howell)
+	path(sero_jia)
 	path (mlstfile)
 	path(busco)
 	path (samplelist)
@@ -184,10 +195,11 @@ process make_report {
 	
 	cp ${rmdfile} rmdfile_copy.Rmd
 	cp ${samplelist} samples.csv
-	cp ${serofile} serofile.csv
+	cp ${sero_Howell} sero_Howell.csv
+	cp ${sero_jia} sero_jia.csv
 	cp ${mlstfile} mlstfile.csv
 
-	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(sero="serofile.csv",mlst="mlstfile.csv",csv="samples.csv"),output_file="Gparasuis_report.html")'
+	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(sero1="sero_Howell.csv",sero2="sero_jia.csv",mlst="mlstfile.csv",csv="samples.csv"),output_file="Gparasuis_report.html")'
 	"""
 
 }
@@ -218,7 +230,7 @@ workflow {
 	db_dir=("${baseDir}/Gparasuis_db")
 	abricate (dragonflye.out.assembly,db_dir)
 	 //make lims file
-    make_limsfile (abricate.out.sero.collect(),mlst.out.collect())
+    make_limsfile (abricate.out.sero_Howell.collect(),abricate.out.sero_jia.collect(),mlst.out.collect())
 	//report generation
 
 	rmd_file=file("${baseDir}/gpara_report.Rmd")
