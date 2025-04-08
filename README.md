@@ -1,10 +1,7 @@
 # Glaeserella parasuis whole genome assembly and typing pipeline
 
 
-Pipeline for whole genome assembly and analysis of Glaserella parasuis. Works only for Oxford Nanopore reads
-
-
-## Pipeline is based on this paper
+Pipeline for whole genome assembly and analysis of Glaserella parasuis. Works only for Oxford Nanopore reads. Serotyping is based on this paper https://doi.org/10.1128/jcm.01991-15 and https://doi.org/10.1128/jcm.02464-16
 
  
 
