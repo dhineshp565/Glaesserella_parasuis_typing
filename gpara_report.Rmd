@@ -32,10 +32,10 @@ params:
   print(knitr::kable(sero_final_1,align='lcccl',caption = "Serotype - \n Predicted based on Howell et al., 2015. For more info please see https://doi.org/10.1128/jcm.01991-15"))
   cat("\n")
 
-  sero_raw_2 <- read.csv(params$sero2,header = TRUE,sep = "\t")
-  sero_final_2 <- sero_raw_2[,c(1,6,10,11,15)]
-  colnames(sero_final_2) <- c("SAMPLE","GENE","%COVERAGE","%IDENTITY","SEROTYPE")
-  print(knitr::kable(sero_final_2,align='lcccl',caption = "Serotype - \n Predicted based on Jia et al., 2017.For more info please see https://doi.org/10.1128/jcm.00688-17"))
+  #sero_raw_2 <- read.csv(params$sero2,header = TRUE,sep = "\t")
+  #sero_final_2 <- sero_raw_2[,c(1,6,10,11,15)]
+  #colnames(sero_final_2) <- c("SAMPLE","GENE","%COVERAGE","%IDENTITY","SEROTYPE")
+  ##print(knitr::kable(sero_final_2,align='lcccl',caption = "Serotype - \n Predicted based on Jia et al., 2017.For more info please see https://doi.org/10.1128/jcm.00688-17"))
   cat("\n")
 
   mlst_raw <- read.csv(params$mlst,header = TRUE,sep = "\t")

@@ -114,7 +114,7 @@ process mlst {
 	path("${SampleName}_MLST.csv")
 	script:
 	"""
-	mlst --legacy --scheme hparasuis ${consensus} > ${SampleName}_MLST.csv
+	mlst ${consensus} > ${SampleName}_MLST.csv
 	sed -i 's,_flye.fasta,,g' ${SampleName}_MLST.csv
 	"""
 }
@@ -126,51 +126,67 @@ process abricate{
 	tuple val(SampleName),path(consensus)
 	path (db)
 	output:
-	path("${SampleName}_sero_Howell.csv"),emit:sero_Howell
+	path("${SampleName}_serotype.csv"),emit:sero_Howell
 	path("${SampleName}_sero_Jia.csv"),emit:sero_jia
 	path("${SampleName}_vf.csv"),emit:vif
 	path("${SampleName}_AMR.csv"),emit:AMR
 	
 	script:
 	"""
-	abricate --datadir ${db} --db Gparasuis_serodb_Howell -minid 80  -mincov 60 --quiet ${consensus} 1> ${SampleName}_sero_Howell.csv
-	sed -i 's,_flye.fasta,,g' ${SampleName}_sero_Howell.csv
+	abricate --datadir ${db} --db Gparasuis_serodb_Howell -minid 80  -mincov 60 --quiet ${consensus} 1> ${SampleName}_serotype.csv
+	sed -i 's,_flye.fasta,,g' ${SampleName}_serotype.csv
 	abricate --datadir ${db} --db Gparasuis_serodb_Jia -minid 80  -mincov 60 --quiet ${consensus} 1> ${SampleName}_sero_Jia.csv
 	sed -i 's,_flye.fasta,,g' ${SampleName}_sero_Jia.csv
 
+	# Define default values
+	DefaultLine="${SampleName}\t${SampleName}_contig_1\tNone\tNone\tNone\tNone\tNone\tNone\tNone\tNone\tNone\tNone\tNone\tNone\tNone"
+	HeaderOnly=1  # Expected line count if only the header is present
+
+
 	abricate -datadir ${db} --db Gparasuis_vfdb ${consensus} 1> ${SampleName}_vf.csv
 	sed -i 's,_flye.fasta,,g' ${SampleName}_vf.csv
+	if [ "\$(wc -l < "${SampleName}_vf.csv")" -eq \$HeaderOnly ]; then
+    	echo -e "\$DefaultLine" >> "${SampleName}_vf.csv"
+	fi
 	abricate --db card ${consensus} 1> ${SampleName}_AMR.csv
 	sed -i 's,_flye.fasta,,g' ${SampleName}_AMR.csv
+	if [ "\$(wc -l < "${SampleName}_AMR.csv")" -eq \$HeaderOnly ]; then
+    	echo -e "\$DefaultLine" >> "${SampleName}_AMR.csv"
+	fi
 	
 	"""
-	
-}
 
+}
 
 
 process make_limsfile {
 	label "low"
 	publishDir "${params.out_dir}/LIMS",mode:"copy"
 	input:
-	path (sero_Howell)
-	path (sero_jia)
+	path (serotyping_results)
+	path(sero_jia)
+	path (vf_results)
+	path (amr_results)
 	path (mlst_results)
+	path (software_version)
 	output:
-	path("Gpara_sero_Howell.csv")
-	path("Gpara_sero_jia.csv")
-	path("Gpara_MLST_file.csv")
+	path("*_LIMS_file.csv")
+	path("sero_file.csv"),emit:sero
+	path("jia_sero_file.csv"),emit:jia_sero
+	path("MLST_file_*.csv"),emit:mlst
+	
 	script:
 	"""
-	# merge serotyping and mlst results
-	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${sero_Howell} > Gpara_sero_Howell.csv
-	sed -i 's/#FILE/id/g' Gpara_sero_Howell.csv
+	LIMS_file.sh
+	
+	date=\$(date '+%Y-%m-%d_%H-%M-%S')
+	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${mlst_results} > MLST_file_\${date}.csv
+	# add header to mlst file
+	sed -i \$'1 i\\\nSAMPLE\tSCHEME\tST\tatpD\tinfB\tmdh\trpoB\t6pgd\tg3pd\tfrdB' MLST_file_\${date}.csv
+	
 
-	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${sero_jia} > Gpara_sero_jia.csv
-	sed -i 's/#FILE/id/g' Gpara_sero_jia.csv
+	
 
-	awk 'FNR==1 && NR!=1 { while (/^FILE/) getline; } 1 {print}' ${mlst_results} > Gpara_MLST_file.csv
-	sed -i 's/FILE/id/g' Gpara_MLST_file.csv
 	"""
 }
 
@@ -229,12 +245,13 @@ workflow {
 	//abricate AMR,serotyping and virulence factors
 	db_dir=("${baseDir}/Gparasuis_db")
 	abricate (dragonflye.out.assembly,db_dir)
+	versionfile=file("${baseDir}/software_version.csv")
 	 //make lims file
-    make_limsfile (abricate.out.sero_Howell.collect(),abricate.out.sero_jia.collect(),mlst.out.collect())
+    make_limsfile (abricate.out.sero_Howell.collect(),abricate.out.sero_jia.collect(),abricate.out.vif.collect(),abricate.out.AMR.collect(),mlst.out.collect(),versionfile)
 	//report generation
 
 	rmd_file=file("${baseDir}/gpara_report.Rmd")
-	make_report (rmd_file,make_limsfile.out,busco.out.collect(),make_csv.out,abricate.out.vif.collect(),abricate.out.AMR.collect())
+	make_report (rmd_file,make_limsfile.out.sero,make_limsfile.out.jia_sero,make_limsfile.out.mlst,busco.out.collect(),make_csv.out,abricate.out.vif.collect(),abricate.out.AMR.collect())
 
 
 }
